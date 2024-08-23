@@ -65,21 +65,21 @@ void Error_Handler(void);
 #define LORA_RST_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-typedef struct
-{
-	uint16_t pream;
-	uint16_t id;
-	float acc[3];
-	float gyro[3];
-	float temp;
-	float press;
-	float hum;
-	float co2;
-	float latt;
-	float lon;
-	uint32_t time_sec; //from 01.01.2000
-	uint16_t CRC16;
-}typeLoraPacket;
+//typedef struct
+//{
+//	uint16_t pream;
+//	uint16_t id;
+//	float acc[3];
+//	float gyro[3];
+//	float temp;
+//	float press;
+//	float hum;
+//	float co2;
+//	float latt;
+//	float lon;
+//	uint32_t time_sec; //from 01.01.2000
+//	uint16_t CRC16;
+//}typeLoraPacket;
 
 /* USER CODE END Private defines */
 

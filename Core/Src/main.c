@@ -69,8 +69,8 @@ int message_length = 0;
 uint8_t bytes[15];
 
 // char buffer[512];
-uint8_t buffer[512];
-typeLoraPacket testpacket;
+uint8_t transmit_buffer[512];
+//typeLoraPacket testpacket;
 /* USER CODE END 0 */
 
 /**
@@ -91,10 +91,9 @@ int main(void)
 
   /* USER CODE BEGIN Init */
   for(int i=1; i<=57; i++){
-	  buffer[i] = i;
+	  transmit_buffer[i] = i;
   }
-
-  memcpy(&testpacket, &buffer, sizeof(testpacket));
+  ret = HAL_UART_Transmit_IT(&huart1, transmit_buffer, 58);
 
   /* USER CODE END Init */
 
@@ -139,7 +138,21 @@ int main(void)
 	  }
 	  HAL_Delay(250);*/
 
-	  Loop();
+	  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+	  HAL_Delay(250);
+
+	  HAL_UART_Transmit_IT(&huart1, transmit_buffer, 58);
+//	  ret = HAL_UART_Transmit_IT(&huart1, transmit_buffer, 58);
+	  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+	  HAL_Delay(250);
+	  /*ret = SX1278_LoRaEntryRx(&SX1278, 15, 2000);
+	  //ret = SX1278_read(&SX1278, buffer, 15);
+	  ret = SX1278_LoRaRxPacket(&SX1278);
+	  if(ret > 0){
+		  ret = SX1278_read(&SX1278, buffer, ret);
+		  HAL_UART_Transmit_IT(&huart1, buffer, SX1278.packetLength);
+	  }
+	  ret = 0;*/
 
 	  //HAL_UART_Transmit();
 
@@ -240,7 +253,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -315,28 +328,17 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void Loop(void)
-{
-	typeLoraPacket packet;
-	ret = SX1278_LoRaEntryRx(&SX1278, 15, 2000);
-	//ret = SX1278_read(&SX1278, buffer, 15);
-	ret = SX1278_LoRaRxPacket(&SX1278);
-	if(ret > 0){
-		ret = SX1278_read(&SX1278, buffer, ret);
 
-	}
-	ret = 0;
-}
 
-/**
-  * @brief  разбор данных из буффера в структуру пакета
-  * @param  buffer_ptr - указатель на буффер
-  * @param	packet - указетель на заполняемый пакет
-  */
-void load_packet_from_buffer(char* buffer, typeLoraPacket* packet_ptr)
-{
-
-}
+///**
+//  * @brief  разбор данных из буффера в структуру пакета
+//  * @param  buffer_ptr - указатель на буффер
+//  * @param	packet - указетель на заполняемый пакет
+//  */
+//void load_packet_from_buffer(char* buffer, typeLoraPacket* packet_ptr)
+//{
+//
+//}
 /* USER CODE END 4 */
 
 /**
