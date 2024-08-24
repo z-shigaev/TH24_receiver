@@ -32,7 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define PACKET_SIZE 58
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,7 +55,7 @@ static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+uint16_t Crc16(uint8_t *pcBlock, uint16_t len);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -65,12 +65,18 @@ SX1278_t SX1278;
 
 int ret = 0;
 int message_length = 0;
+uint16_t crc_calc = 0;
+uint16_t crc_pack = 0;
+char str_corrupted_packet[] = "received corrupted packet";
 
-uint8_t bytes[15];
-
-// char buffer[512];
 uint8_t transmit_buffer[512];
-//typeLoraPacket testpacket;
+//uint8_t test_buffer[PACKET_SIZE] = {0xFF, 0xFF, 0x01, 0x00, 0x00, 0x80, 0xA2, 0xBD, 0x00,\
+//									0xE0, 0xB7, 0x3E, 0x00, 0xD0, 0x25, 0xBE, 0x00, 0x98,\
+//									0xB7, 0xC0, 0x00, 0xE2, 0x81, 0xC0, 0x00, 0xB8, 0x08,\
+//									0x3F, 0x48, 0xE1, 0x04, 0x42, 0x5E, 0xA1, 0xC1, 0x47,\
+//									0x00, 0xD6, 0x76, 0x42, 0xC4, 0x80, 0x78, 0x44, 0x00,\
+//									0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,\
+//									0x00, 0x00, 0xAF, 0x3B};
 /* USER CODE END 0 */
 
 /**
@@ -90,10 +96,11 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  for(int i=1; i<=57; i++){
-	  transmit_buffer[i] = i;
-  }
-  ret = HAL_UART_Transmit_IT(&huart1, transmit_buffer, 58);
+
+//  UART test
+//  for(int i=0; i<PACKET_SIZE; i++){
+//	  transmit_buffer[i] = i;
+//  }
 
   /* USER CODE END Init */
 
@@ -120,41 +127,44 @@ int main(void)
   SX1278.hw = &SX1278_hw;
 
   SX1278_init(&SX1278, 434000000, SX1278_POWER_11DBM, SX1278_LORA_SF_7, SX1278_LORA_BW_125KHZ, SX1278_LORA_CR_4_5, SX1278_LORA_CRC_EN, 15);
-  ret = SX1278_LoRaEntryTx(&SX1278, 16, 2000);
+
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+  ret = SX1278_LoRaEntryRx(&SX1278, PACKET_SIZE, 2000);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  /*message_length = sprintf(buffer, "Hello, world!");
-	  if (message_length >= 0) {
-	  	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-	  	ret = SX1278_transmit(&SX1278, (uint8_t*) buffer, message_length, 2000); //TODO Handle error
-	  }
-	  HAL_Delay(250);
-	  if(ret != 0) {
-	  	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-	  }
-	  HAL_Delay(250);*/
-
-	  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-	  HAL_Delay(250);
-
-	  HAL_UART_Transmit_IT(&huart1, transmit_buffer, 58);
+//	  UART test
+//	  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+//	  HAL_Delay(250);
+//
+//	  HAL_UART_Transmit_IT(&huart1, transmit_buffer, 58);
 //	  ret = HAL_UART_Transmit_IT(&huart1, transmit_buffer, 58);
-	  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-	  HAL_Delay(250);
-	  /*ret = SX1278_LoRaEntryRx(&SX1278, 15, 2000);
+//	  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+//	  HAL_Delay(250);
+//
 	  //ret = SX1278_read(&SX1278, buffer, 15);
 	  ret = SX1278_LoRaRxPacket(&SX1278);
-	  if(ret > 0){
-		  ret = SX1278_read(&SX1278, buffer, ret);
-		  HAL_UART_Transmit_IT(&huart1, buffer, SX1278.packetLength);
-	  }
-	  ret = 0;*/
 
-	  //HAL_UART_Transmit();
+	  if(ret > 0){
+		  ret = SX1278_read(&SX1278, transmit_buffer, PACKET_SIZE);
+		  // crc checking
+		  crc_calc = Crc16(transmit_buffer, PACKET_SIZE-2);
+		  crc_pack = (transmit_buffer[PACKET_SIZE-2] << 8) + transmit_buffer[PACKET_SIZE-1];
+		  //
+		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+		  if (crc_pack == crc_calc){
+			  HAL_UART_Transmit(&huart1, transmit_buffer, PACKET_SIZE, 2000);
+		  }
+		  else{
+			  HAL_UART_Transmit(&huart1, str_corrupted_packet, sizeof(str_corrupted_packet), 2000);
+		  }
+	  }
+	  ret = 0;
+	  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+	  HAL_Delay(500);
 
     /* USER CODE END WHILE */
 
@@ -329,16 +339,17 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-
-///**
-//  * @brief  разбор данных из буффера в структуру пакета
-//  * @param  buffer_ptr - указатель на буффер
-//  * @param	packet - указетель на заполняемый пакет
-//  */
-//void load_packet_from_buffer(char* buffer, typeLoraPacket* packet_ptr)
-//{
-//
-//}
+uint16_t Crc16(uint8_t *pcBlock, uint16_t len) {
+ uint16_t crc = 0xFFFF;
+    unsigned char i;
+    while (len--) {
+        crc ^= *pcBlock++ << 8;
+        for (i = 0; i < 8; i++) {
+            crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+        }
+    }
+    return crc;
+}
 /* USER CODE END 4 */
 
 /**
