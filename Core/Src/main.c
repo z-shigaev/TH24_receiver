@@ -32,7 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define PACKET_SIZE 58
+#define PACKET_SIZE 59
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -126,7 +126,7 @@ int main(void)
 
   SX1278.hw = &SX1278_hw;
 
-  SX1278_init(&SX1278, 434000000, SX1278_POWER_11DBM, SX1278_LORA_SF_7, SX1278_LORA_BW_125KHZ, SX1278_LORA_CR_4_5, SX1278_LORA_CRC_EN, 15);
+  SX1278_init(&SX1278, 434000000, SX1278_POWER_11DBM, SX1278_LORA_SF_7, SX1278_LORA_BW_125KHZ, SX1278_LORA_CR_4_5, SX1278_LORA_CRC_EN, PACKET_SIZE);
 
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
   ret = SX1278_LoRaEntryRx(&SX1278, PACKET_SIZE, 2000);
@@ -152,13 +152,15 @@ int main(void)
 		  ret = SX1278_read(&SX1278, transmit_buffer, PACKET_SIZE);
 		  // crc checking
 		  crc_calc = Crc16(transmit_buffer, PACKET_SIZE-2);
-		  crc_pack = (transmit_buffer[PACKET_SIZE-2] << 8) + transmit_buffer[PACKET_SIZE-1];
+		  crc_pack = (transmit_buffer[PACKET_SIZE-2]) + (transmit_buffer[PACKET_SIZE-1] << 8);
 		  //
 		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 		  if (crc_pack == crc_calc){
+			  // целый пакет
 			  HAL_UART_Transmit(&huart1, transmit_buffer, PACKET_SIZE, 2000);
 		  }
 		  else{
+			  // поврежденный пакет
 			  HAL_UART_Transmit(&huart1, str_corrupted_packet, sizeof(str_corrupted_packet), 2000);
 		  }
 	  }
